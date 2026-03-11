@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <link rel="stylesheet"href="style.css">
+</head>
+
+<body>
+    <h2>Weather Dashboard</h2>
+    <label for="city1">City 1 : </label>
+    <input name="city1" type="text" id="city1" placeholder="Enter City 1"><br>
+    <label for="city2">City 2 : </label>
+    <input name="city2" type="text" id="city2" placeholder="Enter City 2"><br>
+    <label for="city3">City 3 : </label>
+    <input name="city3" type="text" id="city3" placeholder="Enter City 3"><br>
+    <button id="btn">Get Weather</button>
+    <p id="message"></p>
+    <div class="container" id="allweather"></div>
+    <script>
+        let btn = document.querySelector("#btn")
+        btn.addEventListener("click", getWeatherInfo)
+        function condition(n) {
+            if (n === 0) {
+                return {
+                    text: "clear",
+                    emoji: "☀️"
+                }
+            }
+            if (n <= 3) {
+                return {
+                    text: "Cloudy",
+                    emoji: "⛅"
+                }
+            }
+            if (n <= 48) {
+                return {
+                    text: "Fog",
+                    emoji: "🌁"
+                }
+            }
+            if (n <= 67) {
+                return {
+                    text: "Rain",
+                    emoji: "🌧️"
+                }
+            }
+            if (n <= 99) {
+                return {
+                    text: "Thunder Storm",
+                    emoji: "⛈️"
+                }
+            }
+            return {
+                text: "unknown condition", emoji: "🙃"
+            }
+        }
+
+        async function getWeatherInfo() {
+            let city1value = document.getElementById("city1").value
+            let city2value = document.getElementById("city2").value
+            let city3value = document.getElementById("city3").value
+            let cities = [city1value, city2value, city3value]
+            let city1 = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city1value}`)
+            let city2 = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city2value}`)
+            let city3 = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city3value}`)
+            let allweather=document.getElementById("allweather")
+            allweather.innerHTML=""
+            let message = document.getElementById("message")
+            message.innerText = "Loading......"
+            Promise.all([city1, city2, city3])
+                .then((responses) => {
+                    return Promise.all(responses.map(res => res.json()))
+                })
+                .then((weadata) => {
+                    let reqdetail = weadata.map((data) => {
+                        let lat = data.results[0].latitude;
+                        let lon = data.results[0].longitude;
+                        return fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+                    })
+                    return Promise.all(reqdetail);
+                })
+                .then((res) => {
+                    return Promise.all(res.map(i => i.json()))
+                })
+                .then((weather) => {
+                    message.innerText=""
+                    weather.forEach((data, index) => {
+
+                        let temp = data.current_weather.temperature
+                        let code = data.current_weather.weathercode
+                        let info = condition(code)
+
+                        let card = `<div class="card">
+                            <h3>${cities[index]}</h3>
+                            <div class="emoji">${info.emoji}</div>
+                            <div class="temp">${temp}°C</div>
+                            <p>${info.text}</p>
+                            </div>`
+                        allweather.innerHTML += card
+                    })
+                })
+                .catch((error)=>{
+                    console.log("Error:",error)
+                    document.getElementById("message").innerText = "⚠️ Error loading weather"
+                })
+        }
+    </script>
+</body>
+
+</html>
